@@ -16,12 +16,14 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+final authNotifier = AuthNotifier();
+
 final _router = GoRouter(
+  refreshListenable: authNotifier,
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) =>
-          const MyHomePage(title: 'Flutter Demo Home Page'),
+      builder: (context, state) => const HomePage(),
       redirect: (BuildContext context, GoRouterState state) {
         if (FirebaseAuth.instance.currentUser == null) {
           // User is not logged in, redirect to auth page
@@ -52,6 +54,7 @@ class MyApp extends StatelessWidget {
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
+      darkTheme: ThemeData.dark(),
     );
   }
 }
