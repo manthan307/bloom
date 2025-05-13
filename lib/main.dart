@@ -1,8 +1,10 @@
+import 'package:bloom/provider/theme_provider.dart';
 import 'package:bloom/provider/user_provider.dart';
-import 'package:bloom/screens/auth.dart';
+import 'package:bloom/screens/auth/auth.dart';
+import 'package:bloom/screens/auth/editprofile.dart';
 import 'package:bloom/screens/home.dart';
-import 'package:bloom/screens/settings.dart';
-import 'package:bloom/screens/setup.dart';
+import 'package:bloom/screens/auth/settings.dart';
+import 'package:bloom/screens/auth/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +19,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -47,6 +50,10 @@ final _router = GoRouter(
           GoRoute(
             path: '/settings',
             builder: (context, state) => const Settings(),
+          ),
+          GoRoute(
+            path: '/edit',
+            builder: (context, state) => const Editprofile(),
           )
         ]),
     GoRoute(
@@ -72,6 +79,8 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
       return MaterialApp.router(
@@ -84,7 +93,7 @@ class MyApp extends StatelessWidget {
             colorScheme: darkDynamic ?? _defaultDarkColorScheme),
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.system,
+        themeMode: themeProvider.themeMode,
       );
     });
   }

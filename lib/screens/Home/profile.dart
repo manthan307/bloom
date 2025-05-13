@@ -2,6 +2,7 @@ import 'package:bloom/provider/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -11,12 +12,19 @@ class Profile extends StatefulWidget {
 }
 
 class _Profile extends State<Profile> {
+  Future<void> _refreshUser() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider
+        .refreshUser(); // Make sure this method exists in your provider
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<UserProvider>(context).user;
     final displayName = user?.name ?? "Anonymous";
     final photoURL = user?.photoURL ?? 'https://i.imgur.com/QCNbOAo.png';
     final bio = user?.bio;
+    final username = user?.username ?? 'Anonymous';
 
     return SafeArea(
       child: Scaffold(
@@ -33,142 +41,170 @@ class _Profile extends State<Profile> {
               )
             ],
           ),
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Card Container
-                      Container(
-                        margin: const EdgeInsets.only(top: 60),
-                        padding: const EdgeInsets.only(top: 70, bottom: 20),
-                        width: MediaQuery.of(context).size.width * 0.9,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onInverseSurface,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              displayName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+          body: RefreshIndicator(
+              onRefresh: _refreshUser,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(), // Important
+                child: Column(
+                  children: [
+                    Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                      child: Stack(
+                        alignment: Alignment.topCenter,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Card Container
+                          Container(
+                            margin: const EdgeInsets.only(top: 60),
+                            padding: const EdgeInsets.only(top: 70, bottom: 20),
+                            width: MediaQuery.of(context).size.width * 0.9,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onInverseSurface,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            const SizedBox(height: 8),
-
-                            // Bio Section
-                            if (bio != null)
-                              Text(
-                                bio,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                    fontSize: 13,
-                                    height: 1.4),
-                              ),
-
-                            const SizedBox(height: 16),
-
-                            // Stats
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Column(
                               children: [
-                                Column(
+                                Text(
+                                  displayName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '@$username',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Bio Section
+                                if (bio != null)
+                                  Text(
+                                    bio,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        fontSize: 13,
+                                        height: 1.4),
+                                  ),
+                                const SizedBox(height: 16),
+
+                                // Stats
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text("2.4k",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16)),
-                                    Text('Followers',
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            fontSize: 14)),
+                                    Column(
+                                      children: [
+                                        const Text("0",
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16)),
+                                        Text('Friends',
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                                fontSize: 14)),
+                                      ],
+                                    ),
+                                    // const SizedBox(width: 40),
+                                    // Column(
+                                    //   children: [
+                                    //     const Text("8 Days 🔥",
+                                    //         style: TextStyle(
+                                    //             fontWeight: FontWeight.bold,
+                                    //             fontSize: 16)),
+                                    //     Text('Streak',
+                                    //         style: TextStyle(
+                                    //             color: Theme.of(context)
+                                    //                 .colorScheme
+                                    //                 .onSurfaceVariant,
+                                    //             fontSize: 14)),
+                                    //   ],
+                                    // ),
                                   ],
                                 ),
-                                const SizedBox(width: 40),
-                                Column(
+
+                                const SizedBox(height: 20),
+
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text("150",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16)),
-                                    Text('Following',
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            fontSize: 14)),
+                                    // Edit Profile Button
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer,
+                                      ),
+                                      onPressed: () {
+                                        context.go('/edit');
+                                      },
+                                      icon: const Icon(Icons.edit_outlined,
+                                          size: 18),
+                                      label: const Text("Edit Profile"),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.share_outlined),
+                                      onPressed: () async {
+                                        final profileLink =
+                                            "https://bloomapp.com/u/$username"; // Replace with your actual URL format
+                                        final message =
+                                            "Check out my profile on Bloom 🌱\n\nMy username: @$username\n$profileLink";
+                                        SharePlus.instance
+                                            .share(ShareParams(text: message));
+                                      },
+                                    )
                                   ],
-                                ),
+                                )
                               ],
                             ),
+                          ),
 
-                            const SizedBox(height: 20),
-
-                            // Edit Profile Button
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                                foregroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
-                              ),
-                              onPressed: () {
-                                // Edit profile
-                              },
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text("Edit Profile"),
+                          // Profile Image (floating)
+                          Positioned(
+                            top: 0,
+                            child: CircleAvatar(
+                              radius: 60,
+                              backgroundImage: NetworkImage(photoURL),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-
-                      // Profile Image (floating)
-                      Positioned(
-                        top: 0,
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundImage: NetworkImage(photoURL),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 20),
+                    const StatCard(
+                      icon: Icons.timer_outlined,
+                      title: 'Focus Hours',
+                      value: '18.5 hrs',
+                      color: Colors.deepPurple,
+                    ),
+                    const StatCard(
+                      icon: Icons.check_circle_outline,
+                      title: 'Tasks Completed',
+                      value: '32',
+                      color: Colors.green,
+                    ),
+                    const StatCard(
+                      icon: Icons.local_fire_department_outlined,
+                      title: 'Streak',
+                      value: '7 Days 🔥',
+                      color: Colors.orange,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                const StatCard(
-                  icon: Icons.timer_outlined,
-                  title: 'Focus Hours',
-                  value: '18.5 hrs',
-                  color: Colors.deepPurple,
-                ),
-                const StatCard(
-                  icon: Icons.check_circle_outline,
-                  title: 'Tasks Completed',
-                  value: '32',
-                  color: Colors.green,
-                ),
-                const StatCard(
-                  icon: Icons.local_fire_department_outlined,
-                  title: 'Streak',
-                  value: '7 Days 🔥',
-                  color: Colors.orange,
-                ),
-              ],
-            ),
-          )),
+              ))),
     );
   }
 }

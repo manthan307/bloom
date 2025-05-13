@@ -1,3 +1,4 @@
+import 'package:bloom/func/username.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -66,6 +67,24 @@ class _AuthState extends State<Auth> {
                                 if (!context.mounted) return;
                                 context.go('/');
                               } else {
+                                final userDoc = FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.user?.uid);
+
+                                final username = await getUniqueUsername();
+                                debugPrint(username.toString());
+
+                                await userDoc.set({
+                                  'name': user.user?.displayName,
+                                  'bio': null,
+                                  'goal': null,
+                                  'photoURL': user.user?.photoURL,
+                                  'email': user.user?.email,
+                                  'uid': user.user?.uid,
+                                  'username': username,
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                });
+
                                 if (!context.mounted) return;
                                 context.go('/setup');
                               }
@@ -142,9 +161,7 @@ class AuthNotifier extends ChangeNotifier {
 
 Future<UserCredential> signInWithGoogle() async {
   try {
-    final scopes = ['email', 'https://www.googleapis.com/auth/drive.file'];
-
-    final GoogleSignIn googleSignIn = GoogleSignIn(scopes: scopes);
+    final GoogleSignIn googleSignIn = GoogleSignIn();
     final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
     if (googleUser == null) {
