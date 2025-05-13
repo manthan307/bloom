@@ -1,19 +1,26 @@
+import 'package:bloom/provider/user_provider.dart';
 import 'package:bloom/screens/auth.dart';
 import 'package:bloom/screens/home.dart';
+import 'package:bloom/screens/settings.dart';
+import 'package:bloom/screens/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/services.dart';
-import 'firebase_options.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:provider/provider.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp();
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: const MyApp(),
+    ),
   );
-  runApp(const MyApp());
 }
 
 final authNotifier = AuthNotifier();
@@ -22,17 +29,26 @@ final _router = GoRouter(
   refreshListenable: authNotifier,
   routes: [
     GoRoute(
-      path: '/',
-      builder: (context, state) => const HomePage(),
-      redirect: (BuildContext context, GoRouterState state) {
-        if (FirebaseAuth.instance.currentUser == null) {
-          // User is not logged in, redirect to auth page
-          return '/auth';
-        } else {
-          return null;
-        }
-      },
-    ),
+        path: '/',
+        builder: (context, state) => const HomePage(),
+        redirect: (BuildContext context, GoRouterState state) {
+          if (FirebaseAuth.instance.currentUser?.email == null) {
+            // User is not logged in, redirect to auth page
+            return '/auth';
+          } else {
+            // User is logged in, return null to stay on the current route
+            return null;
+          }
+        },
+        routes: [
+          GoRoute(
+              path: '/setup',
+              builder: (context, state) => const ProfileSetup()),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const Settings(),
+          )
+        ]),
     GoRoute(
       path: '/auth',
       builder: (context, state) => const Auth(),
@@ -43,18 +59,33 @@ final _router = GoRouter(
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static final _defaultLightColorScheme = ColorScheme.fromSeed(
+    seedColor: Colors.deepPurple,
+    brightness: Brightness.light,
+  );
+
+  static final _defaultDarkColorScheme = ColorScheme.fromSeed(
+    seedColor: Colors.deepPurple,
+    brightness: Brightness.dark,
+  );
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      routerConfig: _router,
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
-      darkTheme: ThemeData.dark(),
-    );
+    return DynamicColorBuilder(
+        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+      return MaterialApp.router(
+        title: 'Flutter Demo',
+        theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: lightDynamic ?? _defaultLightColorScheme),
+        darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: darkDynamic ?? _defaultDarkColorScheme),
+        routerConfig: _router,
+        debugShowCheckedModeBanner: false,
+        themeMode: ThemeMode.system,
+      );
+    });
   }
 }

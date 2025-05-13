@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -44,22 +45,86 @@ class _AuthState extends State<Auth> {
                   : ElevatedButton.icon(
                       onPressed: () async {
                         setState(() {
-                          isLoading = true;
+                          isLoading = true; // Start loading
                         });
-                        final user = await signInWithGoogle();
 
-                        if (!context.mounted) return;
+                        try {
+                          final user =
+                              await signInWithGoogle(); // Sign in with Google
 
-                        if (user.user != null) {
-                          context.go('/');
-                        } else {
-                          const AlertDialog(
-                            content: Text('Please Login!'),
+                          if (!context.mounted) return;
+
+                          if (user.user != null) {
+                            // If user is signed in, navigate to home page
+                            try {
+                              final doc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.user?.uid)
+                                  .get();
+
+                              if (doc.exists) {
+                                if (!context.mounted) return;
+                                context.go('/');
+                              } else {
+                                if (!context.mounted) return;
+                                context.go('/setup');
+                              }
+                            } catch (e) {
+                              context.go('/auth');
+                            }
+                          } else {
+                            // If user is not signed in, show a dialog
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Login Failed'),
+                                content:
+                                    const Text('Please login to continue!'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context)
+                                          .pop(); // Close the dialog
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          // Handle any errors during the sign-in process
+                          setState(() {
+                            isLoading = false; // Stop loading if error occurs
+                          });
+
+                          if (!context.mounted) return;
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Error'),
+                              content: Text('An error occurred: $e'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context)
+                                        .pop(); // Close the dialog
+                                  },
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
                           );
+                        } finally {
+                          setState(() {
+                            isLoading =
+                                false; // Stop loading once the process completes
+                          });
                         }
                       },
                       icon: const Icon(Icons.g_mobiledata),
-                      label: const Text('Get started with Google')),
+                      label: const Text('Get started with Google'),
+                    ),
             )
           ],
         )));
@@ -76,16 +141,42 @@ class AuthNotifier extends ChangeNotifier {
 }
 
 Future<UserCredential> signInWithGoogle() async {
-  final GoogleSignIn googleSignIn = GoogleSignIn();
-  final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+  try {
+    final scopes = ['email', 'https://www.googleapis.com/auth/drive.file'];
 
-  final GoogleSignInAuthentication googleAuth =
-      await googleUser!.authentication;
+    final GoogleSignIn googleSignIn = GoogleSignIn(scopes: scopes);
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-  return await FirebaseAuth.instance.signInWithCredential(
-    GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    ),
-  );
+    if (googleUser == null) {
+      throw FirebaseAuthException(
+        code: 'SIGN_IN_ABORTED',
+        message: 'Google sign-in was aborted by the user.',
+      );
+    }
+
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    return await FirebaseAuth.instance.signInWithCredential(
+      GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      ),
+    );
+  } catch (e) {
+    if (e is FirebaseAuthException) {
+      // Firebase-specific errors
+      throw FirebaseAuthException(
+        code: e.code,
+        message:
+            e.message ?? 'An unknown error occurred during Google sign-in.',
+      );
+    } else if (e is Exception) {
+      // General errors
+      throw Exception(
+          'An error occurred during Google sign-in. Please try again later.');
+    }
+  }
+  // Ensure a throw statement for any unexpected cases
+  throw Exception('An unknown error occurred during Google sign-in.');
 }
