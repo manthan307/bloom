@@ -47,6 +47,7 @@ dependencies:
   http: ^1.4.0
   firebase_storage: ^12.4.5
   share_plus: ^11.0.0
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
