@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bloom/provider/user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
 
 Future<void> requestStoragePermission() async {
   final deviceInfo = DeviceInfoPlugin();
@@ -213,6 +215,7 @@ class _ProfileSetupState extends State<ProfileSetup> {
       }
     } finally {
       if (mounted) {
+        await Provider.of<UserProvider>(context, listen: false).refreshUser();
         setState(() {
           loading = false;
         });
@@ -274,12 +277,13 @@ class _ProfileSetupState extends State<ProfileSetup> {
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(
-              labelText: "Your Name",
-              border: OutlineInputBorder(),
-            ),
+                labelText: "Your Name",
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(25))),
+                contentPadding: EdgeInsets.all(20)),
           ),
           const SizedBox(height: 30),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: _nextPage,
             child: const Text("Next"),
           ),
@@ -297,10 +301,17 @@ class _ProfileSetupState extends State<ProfileSetup> {
           TextField(
             controller: _usernameController,
             decoration: InputDecoration(
-              labelText: "Username",
-              border: const OutlineInputBorder(),
-              errorText: usernameError,
-            ),
+                labelText: "Username",
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(25)),
+                ),
+                contentPadding: const EdgeInsets.all(20),
+                errorText: usernameError,
+                errorBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red, width: 1),
+                  borderRadius: BorderRadius.all(Radius.circular(25)),
+                ),
+                errorStyle: const TextStyle(color: Colors.red)),
           ),
           const SizedBox(height: 20),
           TextField(
@@ -309,11 +320,14 @@ class _ProfileSetupState extends State<ProfileSetup> {
             decoration: const InputDecoration(
               labelText: "Tell us about yourself",
               hintText: "E.g. I love coding & coffee ☕",
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(25)),
+              ),
+              contentPadding: EdgeInsets.all(20),
             ),
           ),
           const SizedBox(height: 30),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: _nextPage,
             child: const Text("Next"),
           ),
@@ -380,13 +394,15 @@ class _ProfileSetupState extends State<ProfileSetup> {
               TextField(
                 controller: _customGoalController,
                 decoration: const InputDecoration(
-                  labelText: "Enter your custom goal",
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: "Enter your custom goal",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(25)),
+                    ),
+                    contentPadding: EdgeInsets.all(20)),
               ),
             ],
             const SizedBox(height: 30),
-            ElevatedButton(
+            OutlinedButton(
               onPressed: loading ? null : _submitProfile,
               child: loading
                   ? const CircularProgressIndicator()

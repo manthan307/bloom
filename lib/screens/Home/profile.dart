@@ -26,6 +26,12 @@ class _Profile extends State<Profile> {
     final bio = user?.bio;
     final username = user?.username ?? 'Anonymous';
 
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return SafeArea(
       child: Scaffold(
           appBar: AppBar(
@@ -115,21 +121,6 @@ class _Profile extends State<Profile> {
                                                 fontSize: 14)),
                                       ],
                                     ),
-                                    // const SizedBox(width: 40),
-                                    // Column(
-                                    //   children: [
-                                    //     const Text("8 Days 🔥",
-                                    //         style: TextStyle(
-                                    //             fontWeight: FontWeight.bold,
-                                    //             fontSize: 16)),
-                                    //     Text('Streak',
-                                    //         style: TextStyle(
-                                    //             color: Theme.of(context)
-                                    //                 .colorScheme
-                                    //                 .onSurfaceVariant,
-                                    //             fontSize: 14)),
-                                    //   ],
-                                    // ),
                                   ],
                                 ),
 

@@ -1,8 +1,8 @@
 import 'package:bloom/provider/theme_provider.dart';
 import 'package:bloom/provider/user_provider.dart';
 import 'package:bloom/screens/auth/auth.dart';
-import 'package:bloom/screens/auth/editprofile.dart';
-import 'package:bloom/screens/home.dart';
+import 'package:bloom/screens/Home/editprofile.dart';
+import 'package:bloom/screens/Home/home.dart';
 import 'package:bloom/screens/auth/settings.dart';
 import 'package:bloom/screens/auth/setup.dart';
 import 'package:flutter/material.dart';
@@ -35,13 +35,8 @@ final _router = GoRouter(
         path: '/',
         builder: (context, state) => const HomePage(),
         redirect: (BuildContext context, GoRouterState state) {
-          if (FirebaseAuth.instance.currentUser?.email == null) {
-            // User is not logged in, redirect to auth page
-            return '/auth';
-          } else {
-            // User is logged in, return null to stay on the current route
-            return null;
-          }
+          final user = FirebaseAuth.instance.currentUser;
+          return user == null ? '/auth' : null;
         },
         routes: [
           GoRoute(
