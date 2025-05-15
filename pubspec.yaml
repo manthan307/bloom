@@ -48,6 +48,10 @@ dependencies:
   firebase_storage: ^12.4.5
   share_plus: ^11.0.0
   flutter_dotenv: ^5.2.1
+  flutter_image_compress: ^2.4.0
+  flutter_riverpod: ^2.6.1
+  firebase_crashlytics: ^4.3.5
+  firebase_analytics: ^11.4.5
 
 dev_dependencies:
   flutter_test:

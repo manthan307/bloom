@@ -1,21 +1,31 @@
 import 'dart:io';
+
+import 'package:bloom/modals/user_modal.dart';
 import 'package:bloom/provider/user_provider.dart';
+import 'package:bloom/repo/user_repo.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
-class Editprofile extends StatefulWidget {
-  const Editprofile({super.key});
+final userProfileRepositoryProvider =
+    Provider((ref) => UserProfileRepository());
+
+final userProfileProvider =
+    StateNotifierProvider<UserProfileNotifier, AsyncValue<UserModel?>>(
+        (ref) => UserProfileNotifier(ref.watch(userProfileRepositoryProvider)));
+
+class EditProfile extends ConsumerStatefulWidget {
+  const EditProfile({super.key});
 
   @override
-  State<Editprofile> createState() => _EditProfilePageState();
+  ConsumerState<EditProfile> createState() => _EditProfilePageState();
 }
 
-class _EditProfilePageState extends State<Editprofile> {
+class _EditProfilePageState extends ConsumerState<EditProfile> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _bioController;
@@ -26,11 +36,19 @@ class _EditProfilePageState extends State<Editprofile> {
 
   @override
   void initState() {
-    final user = Provider.of<UserProvider>(context, listen: false).user;
-    _nameController = TextEditingController(text: user?.name ?? '');
-    _usernameController = TextEditingController(text: user?.username ?? '');
-    _bioController = TextEditingController(text: user?.bio ?? '');
     super.initState();
+    // We initialize controllers after data is available, so delay init in didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userAsync = ref.watch(userProfileProvider);
+    userAsync.whenData((user) {
+      _nameController = TextEditingController(text: user?.name ?? '');
+      _usernameController = TextEditingController(text: user?.username ?? '');
+      _bioController = TextEditingController(text: user?.bio ?? '');
+    });
   }
 
   Future<void> _pickImage() async {
@@ -42,15 +60,14 @@ class _EditProfilePageState extends State<Editprofile> {
     }
   }
 
-  Future<bool> _isUsernameTaken(String username) async {
-    final user = FirebaseAuth.instance.currentUser!;
+  Future<bool> _isUsernameTaken(String username, String currentUid) async {
     final query = await FirebaseFirestore.instance
         .collection('users')
         .where('username', isEqualTo: username)
         .limit(1)
         .get();
     if (query.docs.isEmpty) return false;
-    return query.docs.first.id != user.uid; // allow own username
+    return query.docs.first.id != currentUid;
   }
 
   Future<String?> _uploadProfilePic(String uid) async {
@@ -70,38 +87,52 @@ class _EditProfilePageState extends State<Editprofile> {
 
     final username = _usernameController.text.trim();
     final bio = _bioController.text.trim();
-    final currentUser = FirebaseAuth.instance.currentUser!;
-    final user = Provider.of<UserProvider>(context, listen: false).user;
+    final name = _nameController.text.trim();
+
+    final userAsync = ref.read(userProfileProvider);
+    final user = userAsync.asData?.value;
+
+    if (user == null) {
+      setState(() {
+        _error = "User data not loaded yet.";
+        _loading = false;
+      });
+      return;
+    }
+
+    final currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
     try {
-      // Only check for username taken if the username was changed
-      if (username != user?.username && await _isUsernameTaken(username)) {
+      if (username != user.username &&
+          await _isUsernameTaken(username, currentUserUid)) {
         setState(() {
           _error = "Username already taken.";
+          _loading = false;
         });
         return;
       }
 
-      final photoUrl = await _uploadProfilePic(currentUser.uid);
+      final photoURL = await _uploadProfilePic(currentUserUid);
 
-      final updates = {
-        'username': username,
-        'bio': bio,
-        if (photoUrl != null) 'photoUrl': photoUrl,
-      };
+      final updatedUser = user.copyWith(
+        name: name,
+        username: username,
+        bio: bio,
+        photoURL: photoURL ?? user.photoURL,
+      );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .update(updates);
+      await ref.read(userProfileProvider.notifier).updateUser(updatedUser);
 
       if (!mounted) return;
-      // Refresh provider
-      await Provider.of<UserProvider>(context, listen: false).fetchUserData();
-      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully")),
+      );
       context.pop();
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() {
+        _error = "Failed to update profile. Please try again.";
+      });
     } finally {
       setState(() => _loading = false);
     }
@@ -117,101 +148,121 @@ class _EditProfilePageState extends State<Editprofile> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserProvider>(context).user;
+    final userAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Edit Profile")),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    if (_error != null)
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 10),
-                    Column(
+      body: userAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text("Error loading profile: $error"),
+        ),
+        data: (user) {
+          if (_nameController.text.isEmpty &&
+              _usernameController.text.isEmpty &&
+              _bioController.text.isEmpty) {
+            // Initialize controllers with user data if empty (initial load)
+            _nameController.text = user?.name ?? '';
+            _usernameController.text = user?.username ?? '';
+            _bioController.text = user?.bio ?? '';
+          }
+
+          return _loading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundImage: _imageFile != null
-                              ? FileImage(_imageFile!)
-                              : (user?.photoURL != null
-                                  ? NetworkImage(user!.photoURL!)
-                                  : null) as ImageProvider?,
-                          child: _imageFile == null && user?.photoURL == null
-                              ? const Icon(Icons.person, size: 25)
+                        if (_error != null)
+                          Text(_error!,
+                              style: const TextStyle(color: Colors.red)),
+                        const SizedBox(height: 10),
+                        Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundImage: _imageFile != null
+                                  ? FileImage(_imageFile!)
+                                  : (user?.photoURL != null
+                                      ? NetworkImage(user!.photoURL!)
+                                      : null) as ImageProvider<Object>?,
+                              child:
+                                  _imageFile == null && user?.photoURL == null
+                                      ? const Icon(Icons.person, size: 50)
+                                      : null,
+                            ),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: _loading ? null : _pickImage,
+                              child: const Text('Change profile photo'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: "Name",
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(25)),
+                            ),
+                            contentPadding: EdgeInsets.all(20),
+                          ),
+                          validator: (val) => val == null || val.trim().isEmpty
+                              ? "Name is required"
                               : null,
                         ),
-                        ElevatedButton(
-                          onPressed: _pickImage,
-                          child: const Text('Change profile photo'),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: const InputDecoration(
+                            labelText: "Username",
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(25)),
+                            ),
+                            contentPadding: EdgeInsets.all(20),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return "Username required";
+                            }
+                            if (val.length < 3) return "Username too short";
+                            if (!RegExp(r'^[a-zA-Z0-9._]+$').hasMatch(val)) {
+                              return "Only letters, numbers, dot or underscore";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _bioController,
+                          decoration: const InputDecoration(
+                            labelText: "Bio",
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(25)),
+                            ),
+                            contentPadding: EdgeInsets.all(20),
+                          ),
+                          maxLines: 3,
+                          maxLength: 150,
+                        ),
+                        const SizedBox(height: 30),
+                        ElevatedButton.icon(
+                          onPressed: _loading ? null : _saveProfile,
+                          icon: const Icon(Icons.save),
+                          label: const Text("Save"),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Name",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(25)),
-                        ),
-                        contentPadding: EdgeInsets.all(20),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Name is required";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(
-                        labelText: "Username",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(25)),
-                        ),
-                        contentPadding: EdgeInsets.all(20),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return "Username required";
-                        }
-                        if (val.length < 3) return "Username too short";
-                        if (!RegExp(r'^[a-zA-Z0-9._]+$').hasMatch(val)) {
-                          return "Only letters, numbers, dot or underscore";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _bioController,
-                      decoration: const InputDecoration(
-                        labelText: "Bio",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(25)),
-                        ),
-                        contentPadding: EdgeInsets.all(20),
-                      ),
-                      maxLines: 3,
-                      maxLength: 150,
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton.icon(
-                      onPressed: _saveProfile,
-                      icon: const Icon(Icons.save),
-                      label: const Text("Save"),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                );
+        },
+      ),
     );
   }
 }

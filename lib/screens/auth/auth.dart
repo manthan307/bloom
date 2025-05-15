@@ -17,145 +17,119 @@ class _AuthState extends State<Auth> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).colorScheme;
+
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        body: SafeArea(
-            child: Column(
+      backgroundColor: theme.surface,
+      body: SafeArea(
+        child: Column(
           children: [
             Expanded(
-                child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Welcome to Bloom!!',
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Welcome to Bloom!!',
                   style: const TextStyle().copyWith(
                     fontSize: 60,
                     fontWeight: FontWeight.w900,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  )),
-            )),
+                    color: theme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
             Container(
               alignment: Alignment.bottomCenter,
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 30),
               decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.inverseSurface,
-                  borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40))),
+                color: theme.inverseSurface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
+                ),
+              ),
               child: isLoading
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : ElevatedButton.icon(
-                      onPressed: () async {
-                        setState(() {
-                          isLoading = true; // Start loading
-                        });
-
-                        try {
-                          final user =
-                              await signInWithGoogle(); // Sign in with Google
-
-                          if (!context.mounted) return;
-
-                          if (user.user != null) {
-                            // If user is signed in, navigate to home page
-                            try {
-                              final doc = await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(user.user?.uid)
-                                  .get();
-
-                              if (doc.exists) {
-                                if (!context.mounted) return;
-                                context.go('/');
-                              } else {
-                                final userDoc = FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.user?.uid);
-
-                                final username = await getUniqueUsername();
-                                debugPrint(username.toString());
-
-                                await userDoc.set({
-                                  'name': user.user?.displayName,
-                                  'bio': null,
-                                  'goal': null,
-                                  'photoURL': user.user?.photoURL,
-                                  'email': user.user?.email,
-                                  'uid': user.user?.uid,
-                                  'username': username,
-                                  'createdAt': FieldValue.serverTimestamp(),
-                                });
-
-                                if (!context.mounted) return;
-                                context.go('/setup');
-                              }
-                            } catch (e) {
-                              context.go('/auth');
-                            }
-                          } else {
-                            // If user is not signed in, show a dialog
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Login Failed'),
-                                content:
-                                    const Text('Please login to continue!'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context)
-                                          .pop(); // Close the dialog
-                                    },
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          // Handle any errors during the sign-in process
-                          setState(() {
-                            isLoading = false; // Stop loading if error occurs
-                          });
-
-                          if (!context.mounted) return;
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Error'),
-                              content: Text('An error occurred: $e'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context)
-                                        .pop(); // Close the dialog
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        } finally {
-                          setState(() {
-                            isLoading =
-                                false; // Stop loading once the process completes
-                          });
-                        }
-                      },
+                      onPressed: () => _startSignIn(context),
                       icon: const Icon(Icons.g_mobiledata),
                       label: const Text('Get started with Google'),
                     ),
-            )
+            ),
           ],
-        )));
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startSignIn(BuildContext context) async {
+    if (!mounted || isLoading) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      await _handleSignIn(context);
+    } catch (e) {
+      if (mounted) _showErrorDialog(this.context, e.toString());
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class AuthNotifier extends ChangeNotifier {
-  late final Stream<User?> _authStream;
+Future<void> _handleSignIn(BuildContext context) async {
+  final user = await signInWithGoogle();
 
-  AuthNotifier() {
-    _authStream = FirebaseAuth.instance.authStateChanges();
-    _authStream.listen((_) => notifyListeners());
+  if (!context.mounted) return;
+
+  final currentUser = user.user;
+  if (currentUser == null) {
+    throw Exception('Login failed. Please try again.');
+  }
+
+  final docRef =
+      FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+  final doc = await docRef.get();
+
+  if (doc.exists) {
+    if (context.mounted) context.go('/');
+  } else {
+    final username = await getUniqueUsername();
+
+    await docRef.set({
+      'name': currentUser.displayName,
+      'bio': null,
+      'goal': null,
+      'photoURL': currentUser.photoURL,
+      'email': currentUser.email,
+      'uid': currentUser.uid,
+      'username': username,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    if (context.mounted) context.go('/setup');
   }
 }
 
@@ -167,33 +141,27 @@ Future<UserCredential> signInWithGoogle() async {
     if (googleUser == null) {
       throw FirebaseAuthException(
         code: 'SIGN_IN_ABORTED',
-        message: 'Google sign-in was aborted by the user.',
+        message: 'Sign-in was cancelled.',
       );
     }
 
     final GoogleSignInAuthentication googleAuth =
         await googleUser.authentication;
 
-    return await FirebaseAuth.instance.signInWithCredential(
-      GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      ),
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
     );
+
+    return await FirebaseAuth.instance.signInWithCredential(credential);
   } catch (e) {
     if (e is FirebaseAuthException) {
-      // Firebase-specific errors
       throw FirebaseAuthException(
         code: e.code,
-        message:
-            e.message ?? 'An unknown error occurred during Google sign-in.',
+        message: e.message ?? 'Unknown Firebase error occurred.',
       );
-    } else if (e is Exception) {
-      // General errors
-      throw Exception(
-          'An error occurred during Google sign-in. Please try again later.');
+    } else {
+      throw Exception('Google sign-in failed. Please try again later.');
     }
   }
-  // Ensure a throw statement for any unexpected cases
-  throw Exception('An unknown error occurred during Google sign-in.');
 }

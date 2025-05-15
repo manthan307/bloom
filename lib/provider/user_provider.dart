@@ -1,59 +1,36 @@
-// lib/providers/user_provider.dart
 import 'package:bloom/modals/user_modal.dart';
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bloom/repo/user_repo.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class UserProvider with ChangeNotifier {
-  UserModel? _user;
+final userProfileRepositoryProvider =
+    Provider((ref) => UserProfileRepository());
 
-  UserModel? get user => _user;
+class UserProfileNotifier extends StateNotifier<AsyncValue<UserModel?>> {
+  final UserProfileRepository _repo;
 
-  UserProvider() {
-    // Listen to auth state changes
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user == null) {
-        clearUser(); // User logged out
-      } else {
-        fetchUserData(); // User logged in
-      }
-    });
+  UserProfileNotifier(this._repo) : super(const AsyncValue.loading()) {
+    fetchUser();
   }
 
-  /// Called on login/auth change
-  Future<void> fetchUserData() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-
-    if (doc.exists) {
-      _user = UserModel.fromMap(doc.data()!);
-      notifyListeners();
+  Future<void> fetchUser() async {
+    try {
+      final user = await _repo.getCurrentUser();
+      state = AsyncValue.data(user);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 
-  /// Called manually from pull-to-refresh or settings
-  Future<void> refreshUser() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-
-    if (doc.exists) {
-      _user = UserModel.fromMap(doc.data()!);
-      notifyListeners();
+  Future<void> updateUser(UserModel updatedUser) async {
+    try {
+      await _repo.updateUser(updatedUser);
+      state = AsyncValue.data(updatedUser); // update local state
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
-  }
-
-  void clearUser() {
-    _user = null;
-    notifyListeners();
   }
 }
+
+final userProfileProvider =
+    StateNotifierProvider<UserProfileNotifier, AsyncValue<UserModel?>>(
+        (ref) => UserProfileNotifier(ref.watch(userProfileRepositoryProvider)));

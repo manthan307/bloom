@@ -1,7 +1,5 @@
-import 'package:bloom/provider/user_provider.dart';
 import 'package:bloom/screens/Home/profile.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,7 +13,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Provider.of<UserProvider>(context, listen: false).fetchUserData();
   }
 
   @override
