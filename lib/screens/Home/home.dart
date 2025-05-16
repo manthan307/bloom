@@ -1,6 +1,6 @@
+import 'package:bloom/screens/Home/chats.dart';
 import 'package:bloom/screens/Home/profile.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,21 +17,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
+    return const DefaultTabController(
       length: 4,
       child: Scaffold(
         body: TabBarView(children: [
-          Center(
-              child: ElevatedButton(
-                  onPressed: () {
-                    context.go('/setup');
-                  },
-                  child: const Text('set up'))),
-          const Text('About'),
-          const Text('contact'),
-          const Profile()
+          ChatScreen(),
+          Text('About'),
+          Text('Contact'),
+          Profile()
         ]),
-        bottomNavigationBar: const TabBar(
+        bottomNavigationBar: TabBar(
             dividerHeight: 0,
             padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             splashBorderRadius: BorderRadius.all(Radius.circular(40)),

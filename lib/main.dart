@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bloom/screens/Home/friends.dart';
 import 'package:bloom/utils/authnotifier.dart';
 import 'package:bloom/provider/theme_provider.dart';
 import 'package:bloom/screens/Home/editprofile.dart';
@@ -71,6 +72,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'edit',
             builder: (context, state) => const EditProfile(),
+          ),
+          GoRoute(
+            path: 'friends',
+            builder: (context, state) => const FriendsScreen(),
           ),
         ],
       ),

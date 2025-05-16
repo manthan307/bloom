@@ -134,11 +134,16 @@ class UserInfoCard extends StatelessWidget {
                   children: [
                     Column(
                       children: [
-                        const Text(
-                          '0',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        TextButton(
+                          onPressed: () {
+                            context.go('/friends');
+                          },
+                          child: const Text(
+                            '0',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         Text(
@@ -217,27 +222,32 @@ class StatSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Wrap(
-      children: [
-        StatCard(
-          icon: Icons.timer_outlined,
-          title: 'Focus Hours',
-          value: '18.5 hrs',
-          color: Colors.deepPurple,
-        ),
-        StatCard(
-          icon: Icons.check_circle_outline,
-          title: 'Tasks Completed',
-          value: '32',
-          color: Colors.green,
-        ),
-        StatCard(
-          icon: Icons.local_fire_department_outlined,
-          title: 'Streak',
-          value: '7 Days 🔥',
-          color: Colors.orange,
-        ),
-      ],
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          StatCard(
+            icon: Icons.timer_outlined,
+            title: 'Focus Hours',
+            value: '18.5 hrs',
+            color: Colors.deepPurple,
+          ),
+          StatCard(
+            icon: Icons.check_circle_outline,
+            title: 'Tasks Completed',
+            value: '32',
+            color: Colors.green,
+          ),
+          StatCard(
+            icon: Icons.local_fire_department_outlined,
+            title: 'Streak',
+            value: '7 Days 🔥',
+            color: Colors.orange,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -261,49 +271,49 @@ class StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: 180,
+        maxWidth: 200,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.all(4), // spacing between items
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: theme.colorScheme.onInverseSurface,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withAlpha(((isDark ? 0.2 : 0.1) * 255).round()),
+                color: color.withAlpha((isDark ? 0.2 : 0.1).round()),
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 28,
+                size: 24,
               ),
             ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
