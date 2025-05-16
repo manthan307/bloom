@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:ui';
-
-import 'package:bloom/func/authnotifier.dart';
+import 'package:bloom/utils/authnotifier.dart';
 import 'package:bloom/provider/theme_provider.dart';
-import 'package:bloom/screens/auth/auth.dart';
 import 'package:bloom/screens/Home/editprofile.dart';
 import 'package:bloom/screens/Home/home.dart';
 import 'package:bloom/screens/Home/settings.dart';
+import 'package:bloom/screens/auth/auth.dart';
 import 'package:bloom/screens/auth/setup.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,57 +18,71 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Enable Crashlytics collection only in release builds
+  await FirebaseCrashlytics.instance
+      .setCrashlyticsCollectionEnabled(!kDebugMode);
+
   FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    if (kDebugMode) {
+      // In debug, print errors to console
+      FlutterError.dumpErrorToConsole(errorDetails);
+    } else {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    }
   };
-  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+
   PlatformDispatcher.instance.onError = (error, stack) {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true;
   };
 
   runZonedGuarded(() {
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+    runApp(const ProviderScope(child: MyApp()));
   }, (error, stackTrace) {
     FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
   });
 }
 
-final _router = GoRouter(
-  refreshListenable: ProviderContainer().read(authNotifierProvider.notifier),
-  routes: [
-    GoRoute(
+// Provider for GoRouter that listens to AuthNotifier's changes
+final routerProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ref.watch(authNotifierProvider.notifier);
+
+  return GoRouter(
+    refreshListenable: authNotifier,
+    initialLocation: '/',
+    routes: [
+      GoRoute(
         path: '/',
         builder: (context, state) => const HomePage(),
-        redirect: (BuildContext context, GoRouterState state) {
+        redirect: (context, state) {
           final user = FirebaseAuth.instance.currentUser;
           return user == null ? '/auth' : null;
         },
         routes: [
           GoRoute(
-              path: '/setup',
-              builder: (context, state) => const ProfileSetup()),
+            path: 'setup',
+            builder: (context, state) => const ProfileSetup(),
+          ),
           GoRoute(
-            path: '/settings',
+            path: 'settings',
             builder: (context, state) => const Settings(),
           ),
           GoRoute(
-            path: '/edit',
+            path: 'edit',
             builder: (context, state) => const EditProfile(),
-          )
-        ]),
-    GoRoute(
-      path: '/auth',
-      builder: (context, state) => const Auth(),
-    )
-  ],
-);
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/auth',
+        builder: (context, state) => const Auth(),
+      ),
+    ],
+  );
+});
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   static final _defaultLightColorScheme = ColorScheme.fromSeed(
@@ -82,28 +95,27 @@ class MyApp extends StatelessWidget {
     brightness: Brightness.dark,
   );
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final themeMode = ref.watch(themeNotifierProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeNotifierProvider);
+    final router = ref.watch(routerProvider);
 
-        return DynamicColorBuilder(
-            builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          return MaterialApp.router(
-            title: 'Flutter Demo',
-            theme: ThemeData(
-                useMaterial3: true,
-                colorScheme: lightDynamic ?? _defaultLightColorScheme),
-            darkTheme: ThemeData(
-                useMaterial3: true,
-                colorScheme: darkDynamic ?? _defaultDarkColorScheme),
-            routerConfig: _router,
-            debugShowCheckedModeBanner: false,
-            themeMode: themeMode,
-          );
-        });
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return MaterialApp.router(
+          title: 'Flutter Demo',
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: lightDynamic ?? _defaultLightColorScheme,
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: darkDynamic ?? _defaultDarkColorScheme,
+          ),
+          themeMode: themeMode,
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+        );
       },
     );
   }

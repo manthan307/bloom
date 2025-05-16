@@ -179,7 +179,7 @@ class UserInfoCard extends StatelessWidget {
               backgroundColor: Colors.grey[200],
               child: ClipOval(
                 child: FadeInImage.assetNetwork(
-                  placeholder: 'assets/avatar.png',
+                  placeholder: 'assets/placeholder.jpg',
                   image: photoURL,
                   width: 120,
                   height: 120,
@@ -217,7 +217,7 @@ class StatSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return const Wrap(
       children: [
         StatCard(
           icon: Icons.timer_outlined,
@@ -275,7 +275,7 @@ class StatCard extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withOpacity(isDark ? 0.2 : 0.1),
+                color: color.withAlpha(((isDark ? 0.2 : 0.1) * 255).round()),
               ),
               child: Icon(
                 icon,

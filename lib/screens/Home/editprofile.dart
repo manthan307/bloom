@@ -27,36 +27,27 @@ class EditProfile extends ConsumerStatefulWidget {
 
 class _EditProfilePageState extends ConsumerState<EditProfile> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _usernameController;
-  late TextEditingController _bioController;
-  late TextEditingController _nameController;
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _bioController = TextEditingController();
+
   File? _imageFile;
   bool _loading = false;
   String? _error;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    // We initialize controllers after data is available, so delay init in didChangeDependencies
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final userAsync = ref.watch(userProfileProvider);
-    userAsync.whenData((user) {
-      _nameController = TextEditingController(text: user?.name ?? '');
-      _usernameController = TextEditingController(text: user?.username ?? '');
-      _bioController = TextEditingController(text: user?.bio ?? '');
-    });
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _bioController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked != null) {
-      setState(() {
-        _imageFile = File(picked.path);
-      });
+      setState(() => _imageFile = File(picked.path));
     }
   }
 
@@ -88,7 +79,6 @@ class _EditProfilePageState extends ConsumerState<EditProfile> {
     final username = _usernameController.text.trim();
     final bio = _bioController.text.trim();
     final name = _nameController.text.trim();
-
     final userAsync = ref.read(userProfileProvider);
     final user = userAsync.asData?.value;
 
@@ -124,7 +114,6 @@ class _EditProfilePageState extends ConsumerState<EditProfile> {
       await ref.read(userProfileProvider.notifier).updateUser(updatedUser);
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully")),
       );
@@ -139,14 +128,6 @@ class _EditProfilePageState extends ConsumerState<EditProfile> {
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _usernameController.dispose();
-    _bioController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
 
@@ -154,17 +135,14 @@ class _EditProfilePageState extends ConsumerState<EditProfile> {
       appBar: AppBar(title: const Text("Edit Profile")),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text("Error loading profile: $error"),
-        ),
+        error: (error, stack) =>
+            Center(child: Text("Error loading profile: $error")),
         data: (user) {
-          if (_nameController.text.isEmpty &&
-              _usernameController.text.isEmpty &&
-              _bioController.text.isEmpty) {
-            // Initialize controllers with user data if empty (initial load)
-            _nameController.text = user?.name ?? '';
-            _usernameController.text = user?.username ?? '';
-            _bioController.text = user?.bio ?? '';
+          if (!_initialized && user != null) {
+            _nameController.text = user.name;
+            _usernameController.text = user.username ?? '';
+            _bioController.text = user.bio ?? '';
+            _initialized = true;
           }
 
           return _loading

@@ -1,4 +1,4 @@
-import 'package:bloom/func/username.dart';
+import 'package:bloom/utils/username.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +57,7 @@ class _AuthState extends State<Auth> {
                     )
                   : ElevatedButton.icon(
                       onPressed: () => _startSignIn(context),
-                      icon: const Icon(Icons.g_mobiledata),
+                      icon: const Icon(Icons.g_mobiledata_outlined),
                       label: const Text('Get started with Google'),
                     ),
             ),

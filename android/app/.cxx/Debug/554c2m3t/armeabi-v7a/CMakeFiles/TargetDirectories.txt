@@ -1,0 +1,2 @@
+C:/Users/Mathan/projects/bloom/android/app/.cxx/Debug/554c2m3t/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Mathan/projects/bloom/android/app/.cxx/Debug/554c2m3t/armeabi-v7a/CMakeFiles/rebuild_cache.dir

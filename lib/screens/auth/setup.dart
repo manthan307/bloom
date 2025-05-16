@@ -50,7 +50,9 @@ class _ProfileSetupScreenState extends State<ProfileSetup> {
 
   Future<void> _submitProfile() async {
     if (_nameController.text.trim().isEmpty ||
-        _usernameController.text.trim().isEmpty) return;
+        _usernameController.text.trim().isEmpty) {
+      return;
+    }
     if (loading) return;
 
     setState(() => loading = true);
