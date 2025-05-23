@@ -21,6 +21,53 @@ class TaskListsNotifier extends StateNotifier<List<TaskList>> {
     state = updatedLists;
   }
 
+  void removeTask(int listIndex, TaskModel task) {
+    final updatedLists = [...state];
+    updatedLists[listIndex].tasks.remove(task);
+    state = updatedLists;
+  }
+
+  void updateTask(int listIndex, TaskModel oldTask, TaskModel newTask) {
+    final updatedLists = [...state];
+    final taskIndex = updatedLists[listIndex].tasks.indexOf(oldTask);
+    if (taskIndex != -1) {
+      updatedLists[listIndex].tasks[taskIndex] = newTask;
+    }
+    state = updatedLists;
+  }
+
+  void toggleTaskCompletion(int listIndex, TaskModel task) {
+    final updatedLists = [...state];
+    final taskIndex = updatedLists[listIndex].tasks.indexOf(task);
+    if (taskIndex != -1) {
+      updatedLists[listIndex].tasks[taskIndex].isDone =
+          !updatedLists[listIndex].tasks[taskIndex].isDone;
+
+      if (updatedLists[listIndex].tasks[taskIndex].isDone) {
+        updatedLists[listIndex].tasks[taskIndex].completedAt = DateTime.now();
+      } else {
+        updatedLists[listIndex].tasks[taskIndex].completedAt = null;
+      }
+    }
+    state = updatedLists;
+  }
+
+  void toggleTaskFav(int listIndex, TaskModel task) {
+    final updatedLists = [...state];
+    final taskIndex = updatedLists[listIndex].tasks.indexOf(task);
+    if (taskIndex != -1) {
+      updatedLists[listIndex].tasks[taskIndex].fav =
+          !updatedLists[listIndex].tasks[taskIndex].fav;
+    }
+    state = updatedLists;
+  }
+
+  void clearCompletedTasks(int listIndex) {
+    final updatedLists = [...state];
+    updatedLists[listIndex].tasks.removeWhere((task) => task.isDone);
+    state = updatedLists;
+  }
+
   void removeList(int index) {
     // If trying to remove "My Tasks", ignore
     if (index == 0) return;

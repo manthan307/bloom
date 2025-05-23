@@ -1,4 +1,5 @@
 import 'package:bloom/home/todo.dart';
+import 'package:bloom/utils/models/task_model.dart';
 import 'package:bloom/utils/provider/theme_provider.dart';
 import 'package:bloom/utils/provider/todo_provider.dart';
 import 'package:flutter/material.dart';
@@ -35,43 +36,78 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _showNewListDialog() async {
     final controller = TextEditingController();
 
-    final listName = await showDialog<String>(
+    final listName = await showGeneralDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('New List'),
-            content: TextField(
-              controller: controller,
-              decoration: InputDecoration(hintText: 'List name'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context, controller.text); // Return name
-                },
-                child: Text('Create'),
+      barrierLabel: "New List",
+      barrierDismissible: true,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).dialogTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'New List',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      hintText: 'List name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, controller.text);
+                    },
+                    child: const Text('Create'),
+                  ),
+                ],
+              ),
+            ),
           ),
+        );
+      },
+      transitionBuilder: (_, anim, __, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          child: FadeTransition(opacity: anim, child: child),
+        );
+      },
     );
 
     if (listName != null && listName.trim().isNotEmpty) {
       final notifier = ref.read(taskListsProvider.notifier);
       notifier.addList(listName);
 
-      // Wait for the UI to update (ensures list is added)
-      await Future.delayed(Duration(milliseconds: 100));
-
-      final newIndex =
-          ref.read(taskListsProvider).length; // 1 for favourites + index
+      await Future.delayed(const Duration(milliseconds: 100));
+      final newIndex = ref.read(taskListsProvider).length;
 
       setState(() {
         _selectedIndex = newIndex;
       });
+
       _pageController.animateToPage(
         newIndex,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
@@ -190,7 +226,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
             context: context,
             builder: (BuildContext context) {
-              return BottomSheetWidget();
+              return AnimatedPadding(
+                duration: const Duration(milliseconds: 300),
+                padding: MediaQuery.of(context).viewInsets,
+                curve: Curves.easeOut,
+                child: BottomSheetWidget(),
+              );
             },
           );
         },
@@ -200,14 +241,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class BottomSheetWidget extends StatefulWidget {
+class BottomSheetWidget extends ConsumerStatefulWidget {
   const BottomSheetWidget({super.key});
 
   @override
-  State<BottomSheetWidget> createState() => _BottomSheetWidgetState();
+  ConsumerState<BottomSheetWidget> createState() => _BottomSheetWidgetState();
 }
 
-class _BottomSheetWidgetState extends State<BottomSheetWidget> {
+class _BottomSheetWidgetState extends ConsumerState<BottomSheetWidget> {
   final TextEditingController titleEditingController = TextEditingController();
   final TextEditingController descriptionEditingController =
       TextEditingController();
@@ -235,12 +276,7 @@ class _BottomSheetWidgetState extends State<BottomSheetWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+      padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,6 +336,23 @@ class _BottomSheetWidgetState extends State<BottomSheetWidget> {
                     isButtonEnable
                         ? () {
                           // Save the new task
+                          final task = TaskModel(
+                            title: titleEditingController.text,
+                            description: descriptionEditingController.text,
+                            fav: isFav,
+                            isDone: false,
+                            isAlarmSet: false,
+                            alarmDateTime: null,
+                            alarmId: null,
+                          );
+
+                          final notifier = ref.read(taskListsProvider.notifier);
+
+                          notifier.addTask(
+                            ref.read(taskListsProvider).length - 1,
+                            task,
+                          );
+
                           titleEditingController.clear();
                           setState(() {
                             isButtonEnable = false;

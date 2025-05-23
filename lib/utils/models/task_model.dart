@@ -4,14 +4,15 @@ const _uuid = Uuid();
 
 class TaskModel {
   final String id;
-  final String title;
-  final String? description;
-  final bool isDone;
+  String title;
+  String? description;
+  bool isDone;
   final DateTime createdAt;
-  final bool fav;
-  final bool isAlarmSet;
-  final DateTime? alarmDateTime;
-  final String? alarmId;
+  bool fav;
+  bool isAlarmSet;
+  DateTime? alarmDateTime;
+  String? alarmId;
+  DateTime? completedAt;
 
   TaskModel({
     required this.title,
@@ -23,6 +24,7 @@ class TaskModel {
     String? id,
     this.alarmDateTime,
     this.alarmId,
+    this.completedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
        id = id ?? _uuid.v4();
 
@@ -36,6 +38,7 @@ class TaskModel {
     bool? isAlarmSet,
     DateTime? alarmDateTime,
     String? alarmId,
+    DateTime? completedAt,
   }) {
     return TaskModel(
       title: title ?? this.title,
@@ -47,6 +50,7 @@ class TaskModel {
       isAlarmSet: isAlarmSet ?? this.isAlarmSet,
       alarmDateTime: alarmDateTime ?? this.alarmDateTime,
       alarmId: alarmId ?? this.alarmId,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 
@@ -60,6 +64,7 @@ class TaskModel {
     'isAlarmSet': isAlarmSet,
     'alarmDateTime': alarmDateTime?.toIso8601String(),
     'alarmId': alarmId,
+    'completedAt': completedAt?.toIso8601String(),
   };
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -74,6 +79,10 @@ class TaskModel {
           json['alarmDateTime'] != null
               ? DateTime.parse(json['alarmDateTime'])
               : null,
+      completedAt:
+          json['completedAt'] != null
+              ? DateTime.parse(json['completedAt'])
+              : null,
       isAlarmSet: json['isAlarmSet'],
       alarmId: json['alarmId'],
     );
@@ -81,7 +90,7 @@ class TaskModel {
 
   @override
   String toString() {
-    return 'TaskModel(id: $id, title: $title, description: $description, isDone: $isDone, createdAt: $createdAt,fav:$fav,isAlarmSet:$isAlarmSet, alarmDateTime:$alarmDateTime,alarmId:$alarmId)';
+    return 'TaskModel(id: $id, title: $title, description: $description, isDone: $isDone, createdAt: $createdAt,fav:$fav,isAlarmSet:$isAlarmSet, alarmDateTime:$alarmDateTime,alarmId:$alarmId,completedAt:$completedAt)';
   }
 
   @override
@@ -97,6 +106,7 @@ class TaskModel {
         other.alarmDateTime == alarmDateTime &&
         other.alarmId == alarmId &&
         other.isAlarmSet == isAlarmSet &&
+        other.completedAt == completedAt &&
         other.createdAt == createdAt;
   }
 
@@ -111,6 +121,7 @@ class TaskModel {
     isAlarmSet,
     alarmDateTime,
     alarmId,
+    completedAt,
   );
 }
 
