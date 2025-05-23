@@ -1,9 +1,20 @@
+import 'package:bloom/utils/models/task_model.dart';
 import 'package:bloom/utils/provider/theme_provider.dart';
+import 'package:bloom/utils/provider/todo_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class Todo extends ConsumerStatefulWidget {
-  const Todo({super.key});
+  const Todo({
+    super.key,
+    required this.tasks,
+    required this.title,
+    required this.index,
+  });
+
+  final List<TaskModel> tasks;
+  final String title;
+  final int index;
 
   @override
   ConsumerState<Todo> createState() => _TodoState();
@@ -14,6 +25,8 @@ class _TodoState extends ConsumerState<Todo> {
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
+
+    final taskList = ref.watch(taskListsProvider.notifier);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -37,7 +50,7 @@ class _TodoState extends ConsumerState<Todo> {
                 Row(
                   children: [
                     Text(
-                      'My Tasks',
+                      widget.title,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const Spacer(),
@@ -47,12 +60,81 @@ class _TodoState extends ConsumerState<Todo> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.more_vert),
-                      onPressed: () {},
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (context) {
+                            return Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    title: const Text('Rename List'),
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          String newName = '';
+                                          return AlertDialog(
+                                            title: const Text('Rename List'),
+                                            content: TextField(
+                                              onChanged: (value) {
+                                                newName = value;
+                                              },
+                                              decoration: const InputDecoration(
+                                                hintText: 'Enter new name',
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  taskList.renameList(
+                                                    widget.index,
+                                                    newName,
+                                                  );
+                                                  Navigator.popUntil(
+                                                    context,
+                                                    (route) => route.isFirst,
+                                                  );
+                                                },
+                                                child: const Text('Rename'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  ListTile(
+                                    title: Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color:
+                                            widget.index == 0
+                                                ? Colors.grey
+                                                : null,
+                                      ),
+                                    ),
+                                    onTap:
+                                        widget.index == 0
+                                            ? null
+                                            : () {
+                                              taskList.removeList(widget.index);
+                                              Navigator.pop(context);
+                                            },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                // Use Column + List.generate instead of ListView
+
                 Column(
                   children: List.generate(1, (index) {
                     return ListTile(

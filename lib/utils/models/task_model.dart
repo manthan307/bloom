@@ -2,7 +2,7 @@ import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
 
-class TodoModel {
+class TaskModel {
   final String id;
   final String title;
   final String? description;
@@ -13,7 +13,7 @@ class TodoModel {
   final DateTime? alarmDateTime;
   final String? alarmId;
 
-  TodoModel({
+  TaskModel({
     required this.title,
     this.description,
     this.fav = false,
@@ -26,7 +26,7 @@ class TodoModel {
   }) : createdAt = createdAt ?? DateTime.now(),
        id = id ?? _uuid.v4();
 
-  TodoModel copyWith({
+  TaskModel copyWith({
     String? title,
     String? description,
     bool? isDone,
@@ -37,7 +37,7 @@ class TodoModel {
     DateTime? alarmDateTime,
     String? alarmId,
   }) {
-    return TodoModel(
+    return TaskModel(
       title: title ?? this.title,
       description: description ?? this.description,
       isDone: isDone ?? this.isDone,
@@ -62,8 +62,8 @@ class TodoModel {
     'alarmId': alarmId,
   };
 
-  factory TodoModel.fromJson(Map<String, dynamic> json) {
-    return TodoModel(
+  factory TaskModel.fromJson(Map<String, dynamic> json) {
+    return TaskModel(
       id: json['id'],
       title: json['title'],
       description: json['description'],
@@ -81,14 +81,14 @@ class TodoModel {
 
   @override
   String toString() {
-    return 'TodoModel(id: $id, title: $title, description: $description, isDone: $isDone, createdAt: $createdAt,fav:$fav,isAlarmSet:$isAlarmSet, alarmDateTime:$alarmDateTime,alarmId:$alarmId)';
+    return 'TaskModel(id: $id, title: $title, description: $description, isDone: $isDone, createdAt: $createdAt,fav:$fav,isAlarmSet:$isAlarmSet, alarmDateTime:$alarmDateTime,alarmId:$alarmId)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is TodoModel &&
+    return other is TaskModel &&
         other.id == id &&
         other.title == title &&
         other.description == description &&
@@ -112,4 +112,11 @@ class TodoModel {
     alarmDateTime,
     alarmId,
   );
+}
+
+class TaskList {
+  String name;
+  final List<TaskModel> tasks;
+
+  TaskList({required this.name, this.tasks = const []});
 }
