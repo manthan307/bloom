@@ -1,3 +1,4 @@
+import 'package:bloom/home/edit.dart';
 import 'package:bloom/utils/models/task_model.dart';
 import 'package:bloom/utils/provider/theme_provider.dart';
 import 'package:bloom/utils/provider/todo_provider.dart';
@@ -354,6 +355,19 @@ class _TodoState extends ConsumerState<Todo> {
                                       },
                                     ),
                                   ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) {
+                                          return EditScreen(
+                                            task: widget.tasks[index],
+                                            listIndex: index,
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
                                 )
                                 : null;
                           },
@@ -476,6 +490,19 @@ class _TodoState extends ConsumerState<Todo> {
                                         },
                                       ),
                                     ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) {
+                                            return EditScreen(
+                                              task: widget.tasks[index],
+                                              listIndex: index,
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
                               ),
